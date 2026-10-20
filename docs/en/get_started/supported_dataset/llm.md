@@ -36,6 +36,7 @@ Below is the list of supported LLM benchmarks. Click on a benchmark name for det
 | `bigcodebench` | [BigCodeBench](../../benchmarks/bigcodebench.md) | `Coding` |
 | `bigcodebench_hard` | [BigCodeBench-Hard](../../benchmarks/bigcodebench_hard.md) | `Coding` |
 | `biomix_qa` | [BioMixQA](../../benchmarks/biomix_qa.md) | `Knowledge`, `MCQ`, `Medical` |
+| `bird_sql` | [BIRD-SQL Mini-Dev](../../benchmarks/bird_sql.md) | `Coding`, `Reasoning` |
 | `boolq` | [BoolQ](../../benchmarks/boolq.md) | `MCQ` |
 | `broad_twitter_corpus` | [BroadTwitterCorpus](../../benchmarks/broad_twitter_corpus.md) | `Knowledge`, `NER` |
 | `ceval` | [C-Eval](../../benchmarks/ceval.md) | `Chinese`, `Knowledge`, `MCQ` |
@@ -58,6 +59,7 @@ Below is the list of supported LLM benchmarks. Click on a benchmark name for det
 | `drivel_selection` | [DrivelologyNarrativeSelection](../../benchmarks/drivel_selection.md) | `MCQ` |
 | `drivel_writing` | [DrivelologyNarrativeWriting](../../benchmarks/drivel_writing.md) | `Knowledge`, `Reasoning` |
 | `drop` | [DROP](../../benchmarks/drop.md) | `Reasoning` |
+| `ds1000` | [DS-1000](../../benchmarks/ds1000.md) | `Coding` |
 | `eq_bench` | [EQ-Bench](../../benchmarks/eq_bench.md) | `InstructionFollowing` |
 | `fin_ner` | [FinNER](../../benchmarks/fin_ner.md) | `Knowledge`, `NER` |
 | `frames` | [FRAMES](../../benchmarks/frames.md) | `LongContext`, `Reasoning` |
@@ -148,6 +150,7 @@ Below is the list of supported LLM benchmarks. Click on a benchmark name for det
 | `swe_bench_lite` | [SWE-bench_Lite](../../benchmarks/swe_bench_lite.md) | `Coding` |
 | `swe_bench_verified` | [SWE-bench_Verified](../../benchmarks/swe_bench_verified.md) | `Coding` |
 | `swe_bench_verified_mini` | [SWE-bench_Verified_mini](../../benchmarks/swe_bench_verified_mini.md) | `Coding` |
+| `tablebench` | [TableBench](../../benchmarks/tablebench.md) | `QA`, `Reasoning` |
 | `tool_bench` | [ToolBench-Static](../../benchmarks/tool_bench.md) | `FunctionCalling`, `Reasoning` |
 | `trivia_qa` | [TriviaQA](../../benchmarks/trivia_qa.md) | `QA`, `ReadingComprehension` |
 | `triviaqa_indic` | [TriviaQA-Indic-MCQ](../../benchmarks/triviaqa_indic.md) | `Knowledge`, `MCQ`, `MultiLingual` |
@@ -195,6 +198,7 @@ Below is the list of supported LLM benchmarks. Click on a benchmark name for det
 ../../benchmarks/bigcodebench.md
 ../../benchmarks/bigcodebench_hard.md
 ../../benchmarks/biomix_qa.md
+../../benchmarks/bird_sql.md
 ../../benchmarks/boolq.md
 ../../benchmarks/broad_twitter_corpus.md
 ../../benchmarks/ceval.md
@@ -217,6 +221,7 @@ Below is the list of supported LLM benchmarks. Click on a benchmark name for det
 ../../benchmarks/drivel_selection.md
 ../../benchmarks/drivel_writing.md
 ../../benchmarks/drop.md
+../../benchmarks/ds1000.md
 ../../benchmarks/eq_bench.md
 ../../benchmarks/fin_ner.md
 ../../benchmarks/frames.md
@@ -307,6 +312,7 @@ Below is the list of supported LLM benchmarks. Click on a benchmark name for det
 ../../benchmarks/swe_bench_lite.md
 ../../benchmarks/swe_bench_verified.md
 ../../benchmarks/swe_bench_verified_mini.md
+../../benchmarks/tablebench.md
 ../../benchmarks/tool_bench.md
 ../../benchmarks/trivia_qa.md
 ../../benchmarks/triviaqa_indic.md
