@@ -365,6 +365,8 @@ METRIC_DEFINITIONS.update(
         ),
         # $OneMillion-Bench reports this normalized rubric-weighted score as its primary metric.
         'expert_score': MetricEntry(baseline='quality.score.ratio', metric_name='Expert Score'),
+        # SLEIGHT-Bench: share of attacks scored above the 1% FPR threshold calibrated on paired benign transcripts.
+        'catch_rate': MetricEntry(baseline='quality.recall.ratio', metric_name='Catch Rate @ 1% FPR'),
         # TableBench's primary metric is the official Mix_Metric (EM / EM±10% / ROUGE-L mix).
         'mix_metric': MetricEntry(baseline='quality.score.ratio', metric_name='Mix Metric'),
         # FinQA: the predicted program's result equals the gold answer / the program equals the gold program.
@@ -372,6 +374,17 @@ METRIC_DEFINITIONS.update(
         'program_accuracy': MetricEntry(baseline='quality.accuracy.ratio', metric_name='Program Accuracy'),
         # SPaRC: share of answers that are not a valid line from start to end (paper Table 7).
         'invalid_path_rate': MetricEntry(baseline='quality.error_rate.ratio', metric_name='Invalid Path Rate'),
+        # MM-SafetyBench++: share of responses whose RQ-5 rating is above 0 (the official refusal rate on
+        # unsafe queries and answer rate on safe ones), and the mean RQ-5 rating on its 0-5 scale.
+        'ccr': MetricEntry(baseline='quality.accuracy.ratio', metric_name='CCR'),
+        'quality_score': MetricEntry(
+            baseline='quality.judge_score.unbounded',
+            metric_name='Quality Score',
+            value_range=ValueRange(min=0, max=5),
+        ),
+        # MASK: 1 - P(lie) under pressure, and the share of pressured statements that match the belief.
+        'honesty_score': MetricEntry(baseline='quality.score.ratio', metric_name='Honesty Score'),
+        'honest_rate': MetricEntry(baseline='quality.score.ratio', metric_name='Honest Rate'),
         'total_model_time': MetricEntry(baseline='diagnostic.unspecified', raw_unit='s', display_precision=2),
         'total_other_time': MetricEntry(baseline='diagnostic.unspecified', raw_unit='s', display_precision=2),
         'total_tool_time': MetricEntry(baseline='diagnostic.unspecified', raw_unit='s', display_precision=2),
@@ -419,6 +432,12 @@ METRIC_DEFINITIONS.update(
 METRIC_DEFINITIONS['auroc'] = MetricEntry(baseline='quality.score.ratio', metric_name='AUROC')
 METRIC_DEFINITIONS['auprc'] = MetricEntry(baseline='quality.score.ratio', metric_name='AUPRC')
 METRIC_DEFINITIONS['public_accuracy'] = MetricEntry(baseline='quality.accuracy.ratio', metric_name='Public Accuracy')
+# Safety benchmarks (salad_bench): `safety` is the share of judged-safe replies and
+# `attack_success_rate` is its complement (the share of judged-unsafe replies).
+METRIC_DEFINITIONS['safety'] = MetricEntry(baseline='quality.accuracy.ratio')
+METRIC_DEFINITIONS['attack_success_rate'] = MetricEntry(
+    baseline='quality.error_rate.ratio', metric_name='Attack Success Rate'
+)
 METRIC_DEFINITIONS['macro_f1'] = MetricEntry(baseline='quality.f1.ratio', metric_name='Macro F1')
 for _registered, _reported in {
     'decision_nll': 'nll',

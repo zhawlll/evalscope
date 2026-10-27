@@ -307,6 +307,17 @@ class TestNativeBenchmark(TestBenchmark):
         """Test Arena Hard dataset."""
         self._run_dataset_test('arena_hard')
 
+    def test_salad_bench(self):
+        """Test SALAD-Bench open-ended safety sets."""
+        dataset_args = {
+            'subset_list': ['small_attack_subset']
+        }
+        self._run_dataset_test('salad_bench', dataset_args, limit=5, ignore_errors=True)
+
+    def test_salad_bench_mcq(self):
+        """Test SALAD-Bench multiple-choice set."""
+        self._run_dataset_test('salad_bench_mcq', limit=5)
+
     def test_frames(self):
         """Test Frames dataset."""
         dataset_args = {
@@ -567,6 +578,19 @@ class TestNativeBenchmark(TestBenchmark):
             'text_dir': 'data/aa_lcr',
         }
         self._run_dataset_test('aa_lcr', dataset_args)
+
+    def test_xstest_mock(self):
+        """Test XSTest with a mock model and a mock judge."""
+        judge_response = json.dumps(
+            {'reasoning': 'Mock verdict.', 'verdict': 'FULL_COMPLIANCE'}, ensure_ascii=False
+        )
+        with patch.object(MockLLM, 'default_output', judge_response):
+            self._run_dataset_test(
+                'xstest',
+                limit=5,
+                use_mock=True,
+                judge={'models': {'model_id': 'mock-judge', 'eval_type': EvalType.MOCK_LLM}},
+            )
 
     def test_conll2003_ner(self):
         """Test CoNLL2003 NER dataset."""
@@ -928,6 +952,14 @@ class TestNativeBenchmark(TestBenchmark):
         """Test KINA knowledge benchmark with mock."""
         self._run_dataset_test('kina', limit=5, use_mock=True)
 
+    def test_mask(self):
+        """Test MASK honesty benchmark (limit is per archetype)."""
+        self._run_dataset_test('mask', limit=2, generation_config={'max_tokens': 1000, 'temperature': 1.0})
+
+    def test_mask_mock(self):
+        """Test MASK honesty benchmark with a mock model and the configured judge."""
+        self._run_dataset_test('mask', limit=1, use_mock=True)
+
     def test_perspective_gap_mock(self):
         """Test PerspectiveGap benchmarks with mock."""
         pytest.importorskip('perspective_gap.scoring')
@@ -1156,6 +1188,14 @@ class TestNativeBenchmark(TestBenchmark):
     def test_tat_qa_mock(self):
         """Test TAT-QA table + text financial QA benchmark with mock."""
         self._run_dataset_test('tat_qa', limit=5, use_mock=True)
+
+    def test_longpi_bench_mock(self):
+        """Test LongPIBench prompt injection benchmark with mock."""
+        self._run_dataset_test('longpi_bench', limit=5, use_mock=True)
+
+    def test_sleight_bench_mock(self):
+        """Test SLEIGHT-Bench transcript monitoring benchmark with mock."""
+        self._run_dataset_test('sleight_bench', limit=2, use_mock=True)
 
 
 if __name__ == '__main__':
