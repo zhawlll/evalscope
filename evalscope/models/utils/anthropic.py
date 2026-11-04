@@ -491,16 +491,19 @@ def anthropic_completion_params(model: str, config: GenerateConfig) -> Dict[str,
         max_tokens=max_tokens,
     )
 
+    # Extended thinking rejects temperature != 1 and top_k, so both are left out when it is enabled.
+    thinking_enabled = config.reasoning_tokens is not None
+
     # Temperature (not compatible with extended thinking)
-    if config.temperature is not None:
+    if config.temperature is not None and not thinking_enabled:
         params['temperature'] = config.temperature
 
     # Top P
     if config.top_p is not None:
         params['top_p'] = config.top_p
 
-    # Top K
-    if config.top_k is not None:
+    # Top K (not compatible with extended thinking)
+    if config.top_k is not None and not thinking_enabled:
         params['top_k'] = config.top_k
 
     # Stop sequences
@@ -512,7 +515,7 @@ def anthropic_completion_params(model: str, config: GenerateConfig) -> Dict[str,
         params['timeout'] = config.timeout
 
     # Extended thinking / reasoning
-    if config.reasoning_tokens is not None:
+    if thinking_enabled:
         params['thinking'] = dict(type='enabled', budget_tokens=config.reasoning_tokens)
 
     # Anthropic top-level automatic prompt caching.
@@ -581,7 +584,7 @@ def message_stop_reason(message: Message) -> StopReason:
         case 'tool_use':
             return 'tool_calls'
         case 'max_tokens':
-            return 'model_length'
+            return 'max_tokens'
         case 'refusal':
             return 'content_filter'
         case _:
@@ -702,6 +705,9 @@ def collect_stream_response(
           from function entry when ``request_start`` is ``None``) until the first chunk
           carrying non-empty content or tool-call data arrives.
           ``None`` if no content chunk was observed.
+
+    Raises:
+        RuntimeError: If the stream ends without a stop reason, so the reply may be partial.
     """
     from anthropic.types import (
         ContentBlockDeltaEvent,
@@ -806,6 +812,9 @@ def collect_stream_response(
                     event.usage,
                     'cache_read_input_tokens',
                 )
+
+    if stop_reason is None:
+        raise RuntimeError('Stream ended without a stop reason')
 
     # Append the last block
     if current_block_index >= 0:
@@ -995,6 +1004,9 @@ async def async_collect_stream_response(
                     event.usage,
                     'cache_read_input_tokens',
                 )
+
+    if stop_reason is None:
+        raise RuntimeError('Stream ended without a stop reason')
 
     # Append the last block
     if current_block_index >= 0:
