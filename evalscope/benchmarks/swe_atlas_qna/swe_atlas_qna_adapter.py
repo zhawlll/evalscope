@@ -34,7 +34,7 @@ from evalscope.api.judge import (
 from evalscope.api.messages import ChatMessageSystem, ChatMessageUser
 from evalscope.api.metric import AggScore, SampleScore
 from evalscope.api.registry import register_benchmark
-from evalscope.api.sandbox import merge_sandbox_config_dicts
+from evalscope.api.sandbox import merge_sandbox_config_dicts, task_sandbox_env_kwargs
 from evalscope.api.tool import ToolCall
 from evalscope.constants import ScoringPolicy, Tags
 from evalscope.utils.logger import get_logger
@@ -49,6 +49,7 @@ from .prompts import (
 from .utils import (
     dirty_check_command,
     extract_final_answer,
+    judge_rubric_statement,
     parse_rubric,
     reset_repo_command,
     rubric_item_passed,
@@ -192,7 +193,7 @@ class SweAtlasEnclaveEnvironment(SweAtlasSandboxMixin, EnclaveAgentEnvironment):
         metric_list=['resolve_rate', 'rubric_pass_rate'],
         primary_metric='resolve_rate',
         extra_params=EXTRA_PARAMS,
-        evaluation_version='v1.0',
+        evaluation_version='v1.1',
     )
 )
 class SweAtlasQnAAdapter(AgentLoopAdapter):
@@ -303,7 +304,7 @@ class SweAtlasQnAAdapter(AgentLoopAdapter):
             setup_command=setup_command,
             check_command=check_command,
             state=state,
-            engine='docker',
+            **task_sandbox_env_kwargs(self._task_config),
             sandbox_config=sandbox_config,
             timeout=self._native_command_timeout() or self.command_timeout,
             interpreter=_INTERPRETER,
@@ -381,7 +382,7 @@ class SweAtlasQnAAdapter(AgentLoopAdapter):
             user = JUDGE_USER_PROMPT_TEMPLATE.format(
                 problem_statement=question,
                 model_answer=judge_context.filtered_prediction,
-                title=case.metadata['title'],
+                title=judge_rubric_statement(case.metadata['title']),
             )
             return JudgeRequest(
                 messages=[
