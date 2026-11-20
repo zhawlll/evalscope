@@ -13,7 +13,10 @@ Thank you for considering contributing to EvalScope! This guide covers everythin
 - Search for related issues and PRs first. Maintainers use the path labels to route PRs.
 
 The AI reviewer posts a summary after Lint, CI Lite and any applicable frontend checks pass for
-a new PR. Diffs over 50 changed files or 48 KiB go to manual review. To request another review, leave
+a new PR. It posts actionable findings on the relevant lines in **Files changed** and keeps
+findings without a valid line in the summary. Each finding includes a severity of Critical,
+High, Medium or Low when provided by the model. Diffs over 50 changed files or 48 KiB go to
+manual review. To request another review, leave
 `/review` on its own line in a PR comment. The author can request it once per commit after CI passes.
 Maintainers can also request a review while CI is pending or failing. The bot updates its summary
 in place. Maintainers make the final review and merge decisions.
@@ -24,13 +27,14 @@ Use the Bug or Feature issue template for a reproducible bug or a feature reques
 Task type for maintenance work. Assign an `area:*` label to route the issue. Ready PRs receive
 area labels from their changed files.
 
-- `needs-triage` is the intake queue for new issues and ready PRs.
+Open issues and ready PRs without a triage status are awaiting initial triage.
+
 - `needs-info` indicates that the author needs to provide more information. An author reply
   returns the item to triage. An author's issue description edit or PR update also requeues it.
 - `accepted` means a maintainer has approved an issue's scope for implementation.
 - `ready-for-review` means a maintainer has checked a PR's scope and validation evidence.
 
-Each item has one triage status. Use GitHub's review requests, approvals, and change requests
+Each item has at most one triage status. Use GitHub's review requests, approvals, and change requests
 to manage the human review. The bot labels findings or failures for the current commit.
 
 - `ai:findings` means the reviewer returned findings for a maintainer to verify.
@@ -41,29 +45,11 @@ and skipped reviews with their reason. It shows the last attempt, commit, comple
 and the Actions run. PR Intake clears the AI label when the PR head changes. A failed re-review
 preserves the previous successful review for reference.
 
-### Operating the AI review workflow
-
-In the repository's Actions settings, configure the OpenAI-compatible base URL and model in
-the `PR_REVIEW_API_BASE` and `PR_REVIEW_MODEL` variables, and store the credential in the
-`PR_REVIEW_API_KEY` secret. Set `PR_REVIEW_AUTO_START_AT` to a UTC timestamp such as
-`2026-11-19T00:00:00Z` to start first reviews for newly opened PRs. Remove the start variable to
-pause automatic reviews while keeping the `/review` command available.
-
-Leave `PR_REVIEW_MAX_OUTPUT_TOKENS` unset to use the provider's output limit.
-On endpoints that support `chat_template_kwargs.enable_thinking`, set
-`PR_REVIEW_ENABLE_THINKING` to `true` and use `PR_REVIEW_REASONING_EFFORT`
-to select a reasoning effort supported by the configured model. Set
-`PR_REVIEW_TEMPERATURE` to override PR-Agent's sampling temperature.
-
-The PR Automation job summary and logs show whether a request reached the model. Open the AI
-review comment to see the commit it covers and any actionable findings.
-
 ## Table of Contents
 
 - [Contributing to EvalScope](#contributing-to-evalscope)
   - [Before opening a pull request](#before-opening-a-pull-request)
     - [Triage and review labels](#triage-and-review-labels)
-    - [Operating the AI review workflow](#operating-the-ai-review-workflow)
   - [Table of Contents](#table-of-contents)
   - [Quick Start](#quick-start)
   - [Development Setup](#development-setup)

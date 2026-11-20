@@ -91,22 +91,6 @@ def test_command_actor(monkeypatch: pytest.MonkeyPatch, permission: str, user_id
     assert bot.command_actor(42, 15, dict(PR, user={'id': 1})) == actor
 
 
-def test_render_only_changed_files_and_suppresses_mentions() -> None:
-    finding = {
-        'relevant_file': 'a.py',
-        'start_line': 12,
-        'issue_header': 'Header',
-        'issue_content': '<!-- evasion --> @someone [text](https://example.org)',
-    }
-    result = {'review': {'key_issues_to_review': [finding, dict(finding, relevant_file='unrelated.py')]}}
-    outcome, body = bot.render(result, ['a.py'])
-    assert outcome == 'ai:findings'
-    assert 'a.py:12' in body
-    assert 'unrelated.py' not in body
-    assert '<!--' not in body
-    assert '@someone' not in body
-
-
 def test_skip_reason_explains_the_actual_diff_limit() -> None:
     assert bot.skip_reason(15, [], b'x' * 62068) == (
         'The PR changes 15 files and the raw diff is 62,068 bytes (60.6 KiB). The diff limit is 49,152 bytes (48 KiB).'
@@ -157,21 +141,14 @@ def test_review_label_only_restores_alerts(outcome: str, label: str) -> None:
 
 @pytest.mark.parametrize(
     ('result', 'title'),
-    [('review', 'No actionable findings'), ('size-skip', 'Review skipped')],
+    [('dsh-success', 'No actionable findings'), ('size-skip', 'Review skipped')],
 )
 def test_quiet_review_updates_comment_and_clears_labels(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, result: str, title: str
 ) -> None:
     (tmp_path / 'request.json').write_text(json.dumps({'files': [], 'skip_reason': 'Diff too large.'}))
-    (tmp_path / 'result.json').write_text(
-        json.dumps(
-            {
-                'review': {'key_issues_to_review': []},
-                'coverage': {'files_not_reviewed': [], 'files_partially_reviewed': []},
-            }
-        )
-    )
-    monkeypatch.setenv('REVIEW_RESULT', result)
+    write_dsh_summary(tmp_path)
+    monkeypatch.setenv('REVIEW_RESULT', dsh_result(0) if result == 'dsh-success' else result)
     monkeypatch.setenv('GITHUB_SERVER_URL', 'https://github.com')
     monkeypatch.setenv('GITHUB_REPOSITORY', 'owner/repo')
     monkeypatch.setenv('GITHUB_RUN_ID', '918')
@@ -207,7 +184,6 @@ def test_triage_pr_expires_status_for_an_old_commit(monkeypatch: pytest.MonkeyPa
     monkeypatch.setattr(bot, 'github', github)
     bot.triage_pr(42, SHA)
     assert calls == [
-        ('issues/42/labels', ('-X', 'POST'), {'labels': ['needs-triage']}),
         ('issues/42/labels/needs-info', ('-X', 'DELETE'), None),
         ('issues/42/labels/ai%3Afindings', ('-X', 'DELETE'), None),
     ]
@@ -217,11 +193,11 @@ def test_triage_resolves_conflicting_states_in_order(monkeypatch: pytest.MonkeyP
     item = {
         'number': 42,
         'state': 'open',
-        'labels': [{'name': 'needs-triage'}, {'name': 'area:core'}, {'name': 'accepted'}],
+        'labels': [{'name': 'needs-info'}, {'name': 'area:core'}, {'name': 'accepted'}],
     }
     events = [
         {'event': 'labeled', 'label': {'name': 'accepted'}, 'created_at': '2026-11-19T08:10:00Z', 'id': 2},
-        {'event': 'labeled', 'label': {'name': 'needs-triage'}, 'created_at': '2026-11-19T08:09:00Z', 'id': 1},
+        {'event': 'labeled', 'label': {'name': 'needs-info'}, 'created_at': '2026-11-19T08:09:00Z', 'id': 1},
     ]
     monkeypatch.setattr(bot, 'list_all', lambda _: events)
     calls = []
@@ -231,35 +207,67 @@ def test_triage_resolves_conflicting_states_in_order(monkeypatch: pytest.MonkeyP
 
     monkeypatch.setattr(bot, 'github', github)
     bot.sync_triage(item)
-    assert calls == [('issues/42/labels/needs-triage', ('-X', 'DELETE'), None)]
+    assert calls == [('issues/42/labels/needs-info', ('-X', 'DELETE'), None)]
 
 
-def test_generate_passes_reasoning_settings(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    settings = {
-        'PR_REVIEW_API_KEY': 'test-key',
-        'PR_REVIEW_API_BASE': 'https://review.example.test/v1',
-        'PR_REVIEW_MODEL': 'review-model',
-        'PR_REVIEW_MAX_OUTPUT_TOKENS': '32768',
-        'PR_REVIEW_ENABLE_THINKING': 'true',
-        'PR_REVIEW_REASONING_EFFORT': 'high',
-        'PR_REVIEW_TEMPERATURE': '1.0',
-    }
-    for name, value in settings.items():
-        monkeypatch.setenv(name, value)
+@pytest.mark.parametrize('item', [PR, {'number': 43, 'state': 'open', 'labels': [{'name': 'area:core'}]}])
+def test_new_open_items_without_a_triage_status_keep_their_labels(monkeypatch: pytest.MonkeyPatch, item: dict) -> None:
+    def github(*args: object, **kwargs: object) -> None:
+        pytest.fail('Triage should not update labels when there is no triage status.')
+
+    monkeypatch.setattr(bot, 'github', github)
+    bot.sync_triage(item)
+
+
+def write_dsh_summary(directory: Path) -> None:
+    (directory / 'dsh-summary.md').write_text(
+        '<!-- dsh-action:v1 kind=summary -->\n## DeepSeek Harness review\n\n### Findings carried in the summary\n'
+    )
+
+
+def dsh_result(selected: int, status: str = 'success') -> str:
+    return json.dumps(
+        {
+            'schemaVersion': 1,
+            'status': status,
+            'operation': 'review',
+            'publication': {'selected': selected},
+        }
+    )
+
+
+def test_dsh_summary_preserves_findings_without_an_inline_location(tmp_path: Path) -> None:
+    write_dsh_summary(tmp_path)
+    assert bot.review_result(dsh_result(1), {}, tmp_path) == ('ai:findings', '### Findings carried in the summary')
+    assert bot.review_result(dsh_result(1, 'failed'), {}, tmp_path)[0] == 'ai:failed'
+    (tmp_path / 'dsh-summary.md').unlink()
+    assert bot.review_result(dsh_result(1), {}, tmp_path)[0] == 'ai:failed'
+
+
+def test_prepare_binds_dsh_review_to_the_checked_head(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    repository = {'id': 5, 'name': 'repo', 'full_name': 'owner/repo', 'owner': {'login': 'owner'}}
+    pr = dict(PR, base=dict(PR['base'], repo=repository), changed_files=1)
     output = tmp_path / 'output'
     monkeypatch.setenv('GITHUB_OUTPUT', str(output))
-    launch_env = {}
+    monkeypatch.setattr(bot, 'previous_review', lambda _: (None, {}, ''))
+    monkeypatch.setattr(bot, 'command_actor', lambda *_: 'maintainer')
+    files = [{'filename': 'evalscope/benchmarks/example/example_adapter.py', 'status': 'added', 'patch': '+change'}]
+    monkeypatch.setattr(bot, 'list_all', lambda _: files)
+    monkeypatch.setattr(bot, 'github', lambda *_: b'+change')
+    monkeypatch.setattr(bot, 'get', lambda _: pr)
 
-    def run(args: list, *, env: dict, **kwargs: object) -> bot.subprocess.CompletedProcess:
-        launch_env.update(env)
-        (tmp_path / 'result.json').write_text('{}')
-        return bot.subprocess.CompletedProcess(args, 0)
+    bot.prepare(42, SHA, 2, tmp_path)
+    event = json.loads((tmp_path / 'pull-request.json').read_text())
+    assert event['repository'] == repository and event['pull_request']['head']['sha'] == SHA
+    assert output.read_text() == 'decision=review\n'
+    prompt = (tmp_path / 'prompt.txt').read_text()
+    assert 'critical' in prompt and 'def format_prompt_template(' in prompt
+    assert 'Write all user-facing review text in English' in prompt
+    assert 'verified required CI' not in prompt
 
-    monkeypatch.setattr(bot.subprocess, 'run', run)
-    bot.generate(tmp_path)
-    assert launch_env['CONFIG__MAX_OUTPUT_TOKENS'] == '32768'
-    assert launch_env['CONFIG__REASONING_EFFORT'] == 'high'
-    assert json.loads(launch_env['CONFIG__ADDITIONAL_REASONING_EFFORT_MODELS']) == ['review-model']
-    assert json.loads(launch_env['LITELLM__EXTRA_BODY']) == {'chat_template_kwargs': {'enable_thinking': True}}
-    assert launch_env['CONFIG__TEMPERATURE'] == '1.0'
-    assert output.read_text() == 'result=review\n'
+    moved = dict(pr, head=dict(pr['head'], sha='b' * 40))
+    snapshots = iter((pr, moved))
+    monkeypatch.setattr(bot, 'get', lambda _: next(snapshots))
+    not_prepared = tmp_path / 'stale'
+    bot.prepare(42, SHA, 2, not_prepared)
+    assert not not_prepared.exists()
